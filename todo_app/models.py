@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
 
 priority=(
     ('H','High'),
@@ -7,8 +7,17 @@ priority=(
     ('L','Low')
 )
 
+
+class CustomUser(AbstractUser):
+    name=models.CharField(max_length=200)
+    email=models.EmailField(unique=True)
+    password=models.CharField(max_length=12)
+    USERNAME_FIELD='email'
+    username=None
+    REQUIRED_FIELDS=[]
+
 class Todo(models.Model):
-    user=models.ForeignKey(User,on_delete=models.CASCADE)
+    user=models.ForeignKey(CustomUser,on_delete=models.CASCADE)
     title=models.CharField(max_length=200)
     desc=models.TextField()
     is_completed=models.BooleanField(default=False)
