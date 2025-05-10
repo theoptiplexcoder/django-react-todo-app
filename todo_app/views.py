@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from .models import CustomUser, Todo
 from rest_framework.response import Response
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import AuthenticationFailed,NotAuthenticated
 from rest_framework.permissions import IsAuthenticated
 
 from .serializers import TodoSerializer, UserSerializer
@@ -14,8 +14,11 @@ from datetime import datetime,timedelta, timezone
 # Create your views here.
 
 
-class UserAuthView(APIView):
+class UserRegisterView(APIView):
+    #register
     def post(self,request):
+        password=request.data['password']
+        email=request.data['email']
         serializer=UserSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
@@ -24,10 +27,13 @@ class UserAuthView(APIView):
             #},status=status.HTTP_201_CREATED)
             return Response(serializer.data)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-    
+
+class UserLoginView(APIView):
+    #login
     def get(self,request):
         email=request.data['email']
         password=request.data['password']
+
         user=CustomUser.objects.filter(email=email).first()
 
         if user is None:
@@ -42,7 +48,7 @@ class UserAuthView(APIView):
             'iat':datetime.now(timezone.utc)
         }
 
-        token=jwt.encode(payload,'adasjdnjdnsud@hiuahsd751343$#',algorithm='HS256')
+        token=jwt.encode(payload,'asdsdaj7364638#h#723y8@#$',algorithm='HS256')
         response=Response()
         response.set_cookie(
             key="jwt",value=token,httponly=True
@@ -52,15 +58,29 @@ class UserAuthView(APIView):
             'message':"Login Succesful!"
         }
         return response
-        
-        
+
+class UserLogoutView(APIView):
+    #logout
+    def post(self,request):
+        response=Response()
+        response.delete_cookie('jwt')
+        response.data={
+            'message':"Logout Successful!"
+        }
+        return response
+
+
+
 
 class UserTodoListView(APIView):
-    permission_classes=[IsAuthenticated,]
     def get(self,request):
-        todos=Todo.objects.filter(user=request.user)
+        token=request.COOKIES.get('jwt')
+        if not token:
+            raise NotAuthenticated("Unauthenticated!")
+        payload=jwt.decode(token,'asdsdaj7364638#h#723y8@#$',algorithms=['HS256'])
+        todos=Todo.objects.filter(user_id=payload['id'])
         serializer=TodoSerializer(todos,many=True)
-        return Response(serializer.data,status=status.HTTP_200_OK)
+        return Response({"data":serializer.data},status=status.HTTP_200_OK) 
 
     def post(self,request):
         new_task=TodoSerializer(request.data)
@@ -85,3 +105,5 @@ class UserTodoListView(APIView):
         item=get_object_or_404(Todo,id=id)
         item.delete()
         return Response({"status":"success","data":f"{item.title}Todo Deleted"})
+
+
